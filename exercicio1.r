@@ -54,33 +54,37 @@ data_origin_teste["class"] = data.frame(class_teste)
 
 # Selecionando treino com dados com PCA
 data_with_pca_treino = data_with_pca[c(1:200), 1:ncol(data_with_pca)] 
-data_with_pca_treino["class"] = class_treino
+data_with_pca_treino = data.frame(data_with_pca_treino)
+data_with_pca_treino["class"] = data.frame(class_treino)
 data_with_pca_teste = data_with_pca[c(201:number_row), 1: ncol(data_with_pca)] 
+data_with_pca_teste = data.frame(data_with_pca_teste)
 data_with_pca_teste["class"] = data.frame(class_teste)
   
 # aplicando LDA e GLM
 install.packages("bestglm")
 install.packages("SDMTools")
+install.packages("caret")
 library(MASS) 
 library(SDMTools)
+library(caret)
 
 ### Com PCA ###
 # Regressao logistica
-data_with_pca_glm = glm(formula = class ~ . , data = data_with_pca_treino, family=binomial(link=logit))
-pred_with_pca_glm<-predict(data_with_pca_glm,newdata=data.frame(data_with_pca_teste),type="response", se.fit=T)
+data_with_pca_glm = glm(formula = class ~ . , data = data.frame(data_with_pca_treino), family=binomial(link=logit))
+pred_with_pca_glm<-predict(data_with_pca_glm,newdata=data.frame(data_with_pca_teste),type="response")
 
 #LDA
-data_with_pca_lda = lda( clase ~ .,data_with_pca_treino)
-pred_with_pca_lda <- predict(data_origin_lda,data_origin_teste)
+data_with_pca_lda = lda( class ~ .,data_with_pca_treino)
+pred_with_pca_lda <- predict(data_with_pca_lda,data_with_pca_teste)
 
 
 ### Sem PCA ###
 # Regressao logistica
-data_origin_glm = glm(formula = class ~ ., data = data_origin_treino,family=binomial(link=logit))
-pred_origin_glm<-predict(data_origin_glm,newdata=data.frame(data_origin_teste),type="response", se.fit=T)
+data_origin_glm = glm(formula = class ~ ., data = data.frame(data_origin_treino),family=binomial(link=logit))
+pred_origin_glm <- predict(data_origin_glm,newdata=data.frame(data_origin_teste),type="response")
 
 #LDA
-data_origin_lda = lda( clase ~ .,data_origin_treino)
+data_origin_lda = lda(class ~ .,data_origin_treino)
 pred_origin_lda <- predict(data_origin_lda,data_origin_teste)
 
 
@@ -88,14 +92,18 @@ pred_origin_lda <- predict(data_origin_lda,data_origin_teste)
 # Questao  numero 2 -Treine uma regressao logistica no conjunto de treino dos dados originais e nos dados transformados.
 # Qual a taxa de acerto no conjunto de teste nas 2 condicoes (sem e com PCA)
 # Com PCA
-accuracy(class_treino,data_with_pca_glm,threshold=0.5)
+table(class_teste, pred_with_pca_glm > 0.5)
+
 # Sem PCA
-accuracy(class_treino,data_origin_glm,threshold=0.5)
+table(class_teste, pred_origin_glm > 0.5)
+#accuracy(class_treino,data_origin_glm,threshold=0.5)
 
 # Questao numero 3 - Treine o LDA nos conjuntos de treino com e sem PCA e teste nos respectivos conjuntos de testes. Qual acuracia de cada um?
 # Com PCA
-accuracy(class_teste,pred_with_pca_lda,threshold=0.5)
+table(pred_with_pca_lda$class, class_teste)
+#accuracy(class_teste,pred_with_pca_lda,threshold=0.5)
 # Sem PCA
-accuracy(class_teste,pred_origin_lda,threshold=0.5)
+table(pred_origin_lda$class, class_teste)
+#accuracy(class_teste,pred_origin_lda,threshold=0.5)
 
 
