@@ -71,7 +71,7 @@ library(caret)
 ### Com PCA ###
 # Regressao logistica
 data_with_pca_glm = glm(formula = class ~ . , data = data.frame(data_with_pca_treino), family=binomial(link=logit))
-pred_with_pca_glm<-predict(data_with_pca_glm,newdata=data.frame(data_with_pca_teste),type="response")
+pred_with_pca_glm <- predict(data_with_pca_glm,newdata=data.frame(data_with_pca_teste),type="response")
 
 #LDA
 data_with_pca_lda = lda( class ~ .,data_with_pca_treino)
@@ -92,18 +92,23 @@ pred_origin_lda <- predict(data_origin_lda,data_origin_teste)
 # Questao  numero 2 -Treine uma regressao logistica no conjunto de treino dos dados originais e nos dados transformados.
 # Qual a taxa de acerto no conjunto de teste nas 2 condicoes (sem e com PCA)
 # Com PCA
-table(class_teste, pred_with_pca_glm > 0.5)
-
+glm_confusion_with_pca = table(class_teste, pred_with_pca_glm > 0.5)
+glm_acuracia_with_pca =(glm_confusion_with_pca[1] + glm_confusion_with_pca[4])/(glm_confusion_with_pca[1] + glm_confusion_with_pca[2] + glm_confusion_with_pca[3] + glm_confusion_with_pca[4]) 
+print(glm_acuracia_with_pca)
 # Sem PCA
-table(class_teste, pred_origin_glm > 0.5)
+glm_confusion_origin = table(class_teste, pred_origin_glm > 0.5)
+glm_acuracia_origin =(glm_confusion_origin[1] + glm_confusion_origin[4])/(glm_confusion_origin[1] + glm_confusion_origin[2] + glm_confusion_origin[3] + glm_confusion_origin[4]) 
+print(glm_acuracia_origin)
 #accuracy(class_treino,data_origin_glm,threshold=0.5)
 
 # Questao numero 3 - Treine o LDA nos conjuntos de treino com e sem PCA e teste nos respectivos conjuntos de testes. Qual acuracia de cada um?
 # Com PCA
-table(pred_with_pca_lda$class, class_teste)
-#accuracy(class_teste,pred_with_pca_lda,threshold=0.5)
+lda_confusion_with_pca = table(pred_with_pca_lda$class, class_teste)
+lda_acuracia_with_pca =(lda_confusion_with_pca[1] + lda_confusion_with_pca[4])/(lda_confusion_with_pca[1] + lda_confusion_with_pca[2] + lda_confusion_with_pca[3] + lda_confusion_with_pca[4]) 
+print(lda_acuracia_with_pca)
 # Sem PCA
-table(pred_origin_lda$class, class_teste)
-#accuracy(class_teste,pred_origin_lda,threshold=0.5)
+lda_confusion_origin = table(pred_origin_lda$class, class_teste)
+lda_acuracia_origin =(lda_confusion_origin[1] + lda_confusion_origin[4])/(lda_confusion_origin[1] + lda_confusion_origin[2] + lda_confusion_origin[3] + lda_confusion_origin[4]) 
+print(lda_acuracia_origin)
 
 
