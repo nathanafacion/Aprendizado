@@ -1,0 +1,161 @@
+import numpy as np
+from sklearn import preprocessing
+from sklearn.metrics import confusion_matrix
+from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import StratifiedKFold
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.neural_network import MLPClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.decomposition import PCA
+from sklearn.svm import SVC
+
+
+### Nome: Nathana Facion
+### Exercicio 3 - Aprendizado de maquina
+
+def meanFinal(acfinal, n_folds):
+    return round(float(acfinal / n_folds), 4)
+
+def accuracy(matrix):
+    return round(float(matrix[0][0] + matrix[1][1]) / float(matrix.sum()), 4)
+
+def  SVM (parameters):
+    return GridSearchCV(SVC(kernel='rbf'), parameters,cv=3,  scoring='accuracy')
+
+def KNN (parameters):
+    return GridSearchCV(KNeighborsClassifier(), parameters, cv=3, scoring='accuracy')
+
+def RN (parameters):
+    return GridSearchCV(MLPClassifier(), parameters, cv=3, scoring='accuracy')
+
+def RF (parameters):
+    return GridSearchCV(RandomForestClassifier(), parameters, cv=3, scoring='accuracy')
+
+def GBM (parameters):
+    return GridSearchCV(GradientBoostingClassifier(), parameters, cv=3, scoring='accuracy')
+
+def kfoldExterno(parameters,X,Y,algorithm):
+    n_folds = 5
+    external_skf = StratifiedKFold(n_folds)
+    acxFinal = 0
+    for training_index, test_index in external_skf.split(X,Y):
+        X_train, X_test = X[training_index], X[test_index]
+        Y_train, Y_test = Y[training_index], Y[test_index]
+        if algorithm =='SVM':
+            model = SVM(parameters)
+        elif algorithm == 'KNN':
+            pca = PCA(n_components=0.8)
+            pca.fit(X_train)
+            X_train = pca.transform(X_train)
+            X_test = pca.transform(X_test)
+            model = KNN(parameters)
+        elif algorithm == 'RN': # Redes Neurais
+            model = RN(parameters)
+        elif algorithm == 'RF':  # Random Forest
+            model = RF(parameters)
+        elif algorithm =='GBM': # Gradient Boosting Machine
+            model = GBM(parameters)
+        model.fit(X_train, Y_train)
+        predicted = model.predict(X_test)
+
+        c_matrix = confusion_matrix(Y_test, predicted)
+        ac = accuracy(c_matrix)
+        acxFinal = ac + acxFinal
+
+    return meanFinal(acxFinal, n_folds)
+
+
+# Realiza pre processamento
+# - Preprocesse os dados do arquivo: remova colunas que tem mais que 30% de dados faltantes.
+# - Remova as linhas que ainda tem dados faltantes.
+# - Finalmente padronize as colunas para media 0 e desvio padrao 1.
+def preProcessingData():
+    fileData = '//home//nathana//AM//exercicio3//secom.data.txt'
+    fileClass = '//home//nathana//AM//exercicio3//secom_labels.data.txt'
+
+    # Ler dois arquivos pedido
+    data = open(fileData, 'r')
+    dataClass = open(fileClass, 'r')
+
+    X = []
+    Y = []
+    #  Transforma vetor com tipo nan e float
+    for i,row in enumerate(data):
+        udateData = []
+        [udateData.append(np.nan if c == 'NaN' else float(c)) for c in row.split()]
+        X.append(udateData)
+
+    # Elimina a coluna com data e guarda apenas a classe
+    for i, row in enumerate(dataClass):
+         Y.append(row.split()[0])
+
+    X = np.array(X)
+    Y = np.array(Y)
+
+    # remova colunas que tem mais que 30% de dados faltantes
+    deleteColumns = []
+
+
+    for i in range(X.shape[1]): # numero de colunas
+        col = X[0:X.shape[0], i]
+        totalNaN = np.count_nonzero(np.isnan(col))
+        percNaN = (float(totalNaN) / float(col.size))
+        deleteColumns.append(i) if (percNaN > 0.3) else None
+
+    X = np.delete(X, deleteColumns, axis=1)
+
+    # Remova as linhas que ainda tem dados faltantes
+    deleteRows = []
+    for i, row in enumerate(X):
+        hasNaN = np.count_nonzero(np.isnan(row))
+        deleteRows.append(i) if hasNaN else None
+
+    #  Finalmente padronize as colunas para media 0 e desvio padrao 1
+    #  preprocessing.scale  realiza essa acao
+    X = preprocessing.scale(np.delete(X, deleteRows, axis=0))
+    Y = np.delete(Y, deleteRows, axis=0)
+
+    # Close Files
+    data.close()
+    dataClass.close()
+
+    return X, Y
+
+
+
+def main():
+    X, Y = preProcessingData()
+
+    ### KNN
+    #  Para o kNN, faca um PCA que mantem 80% da variancia. Busque os valores do k entre os valores 1, 5, 11, 15, 21, 25..
+    parameters = {'n_neighbors': [ 1, 5, 11, 15, 21, 25]}
+    mean_knn = kfoldExterno(parameters,X,Y,'KNN')
+    print('KNN:',mean_knn)
+
+    #### SVM
+    # Para o SVM RBF teste para C=2**(-5), 2**(0), 2**(5), 2**(10) e gamma= 2**(-15) 2**(-10) 2**(-5) 2**(0) 2**(5)
+    parameters ={'C': [2**(-5), 2**(0), 2**(5), 2**(10)], 'gamma': [ 2**(-15), 2**(-10), 2**(-5), 2**(0), 2**(5)]}
+    mean_svm = kfoldExterno(parameters, X, Y, 'SVM')
+    print('SVM:',mean_svm)
+
+    #### Rede neural
+    # Para a rede neural, teste com 10, 20, 30 e 40 neuronios na camada escondida.
+    parameters ={ 'hidden_layer_sizes' :[10, 20, 30 ,40 ],'max_iter' : [400, 500, 600, 700, 800]}
+    mean_rn = kfoldExterno(parameters, X, Y, 'RN')
+    print('RN:',mean_rn)
+
+    #### Random Forest
+    #  Para o RF, teste com mtry ou n_featrues = 10, 15, 20, 25 e ntrees = 100, 200, 300 e 400..
+    parameters ={ 'max_features' : [10, 15, 20, 25], 'n_estimators': [100, 200, 300 ,400]}
+    mean_rf = kfoldExterno(parameters, X, Y, 'RF')
+    print('RF:',mean_rf)
+
+    ### Gradient Boosting Machine
+    # Para o GBM (ou XGB) teste para numero de arvores = 30, 70, e 100, com learning rate de 0.1 e 0.05
+    parameters = {'learning_rate': [0.1,0.05], 'max_depth': [5], 'n_estimators':[30, 70,100]}
+    mean_gbm = kfoldExterno(parameters, X, Y, 'GBM')
+    print('GBM:', mean_gbm)
+
+if __name__ == '__main__':
+    main()

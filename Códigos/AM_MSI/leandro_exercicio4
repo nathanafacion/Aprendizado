@@ -1,0 +1,68 @@
+#!/usr/local/bin/python
+# -*- coding: utf-8 -*-
+
+"""
+Work Nº: 4
+Course: Machine Learning
+Description: Clustering
+
+Name: Leandro Souza da Silva
+RA: 191082
+Date : 31/10/2016.
+Local: Unicamp - Universidade Estadual de Campinas
+"""
+
+import numpy as np
+from numpy import genfromtxt
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_samples, silhouette_score
+import matplotlib.pyplot as plt
+from sklearn import metrics
+import matplotlib.patches as mpatches
+
+
+# Build a dateset Standardized
+def buildDataSet(fileData, fileClass):
+    X = genfromtxt(fileData, delimiter=',')[1:]
+    Y = genfromtxt(fileClass, delimiter=',')[1:]
+    return X, Y
+
+
+def test():
+    fileData = "/home/nathana/AM/exercicio4//cluster-data.csv"
+    fileClass = "/home/nathana/AM/exercicio4//cluster-class.csv"
+    X, Y = buildDataSet(fileData, fileClass)
+    plot_internal = []
+    plot_external = []
+    range_n_clusters = [i for i in range(2, 11)]
+
+    for i in range(2, 11):
+        kmeans_model = KMeans(n_clusters=i, n_init=5).fit(X)
+        labels = kmeans_model.labels_
+        s_score = metrics.silhouette_score(X, labels, metric='euclidean')
+        s_adj = metrics.adjusted_mutual_info_score(Y, labels)
+        plot_internal.append((i, s_score))
+        plot_external.append((i, s_adj))
+        print "K: %d intern: %f extern: %f" % (i + 2, s_score, s_adj)
+
+    l1 = mpatches.Patch(color='blue', label='Metrica interna')
+    l2 = mpatches.Patch(color='green', label='Metrica externa')
+
+    internal_data = np.array(plot_internal)
+    exteral_data = np.array(plot_external)
+
+    plt.xlabel('Numero de Clusters')
+    plt.ylabel('Score')
+
+    plt.legend(handles=[l1, l2])
+    plt.plot(internal_data.transpose()[0], internal_data.transpose()[1])
+    plt.plot(exteral_data.transpose()[0], exteral_data.transpose()[1])
+    plt.show()
+
+
+def main():
+    test()
+
+
+if __name__ == '__main__':
+    main()

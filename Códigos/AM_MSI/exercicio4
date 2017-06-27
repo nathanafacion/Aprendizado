@@ -1,0 +1,76 @@
+import numpy as np
+from numpy import genfromtxt
+from sklearn.cluster import KMeans
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+from sklearn import metrics
+
+### Nome: Nathana Facion
+### Exercicio 4 - Aprendizado de maquina
+
+#  Use alguma metrica interna (algum Dunn, Silhouette, Calinski-Harabaz index)
+def metric_intern(estimator, data):
+    estimator.fit(data)
+    return metrics.silhouette_score(data, estimator.labels_,
+                             metric='euclidean')
+
+# Use alguma medida externa (Normalized/adjusted Rand, Mutual information, variation of information) para decidir no k.
+def metric_extern(estimator, data, class_origin):
+    estimator.fit(data)
+    return metrics.adjusted_mutual_info_score(class_origin,  estimator.labels_)
+
+
+def main():
+    fileName = "/home/nathana/AM/exercicio4//cluster-data.csv"
+    fileNameClass = "/home/nathana/AM/exercicio4//cluster-class.csv"
+
+    data = genfromtxt(fileName, delimiter=',')[1:]
+    dataClass = genfromtxt(fileNameClass, delimiter=',')[1:]
+
+    fileData = np.array([d for d in data])
+    fileClass = np.array([float(d) for d in dataClass])
+
+    # k a se escolher
+    k_init =  2
+    k_end = 10
+
+    # Rode o kmeans nos dados, com numero de restarts = 5
+    n_init = 5
+
+    x = []
+    y_intern = []
+    y_extern = []
+    for k in xrange(k_init, k_end + 1):
+        kmeans = KMeans(n_clusters = k, n_init = n_init)
+        intern = metric_intern(kmeans,data = fileData)
+        extern = metric_extern(kmeans,data = fileData,  class_origin = fileClass)
+        x.append(k)
+        y_intern.append(intern)
+        y_extern.append(extern)
+        print 'k: ', k, 'intern: ', intern, 'extern: ', extern
+
+    # Plote os graficos correspondentes das 2 metricas (interna e externa)
+    plt.plot(x, y_intern)
+    plt.plot(x, y_extern)
+    plt.xlabel('k')
+    plt.title('Metrica Interna e Externa - KMeans')
+    blue_patch = mpatches.Patch(color = 'blue', label = 'Metrica Interna')
+    green_patch = mpatches.Patch(color = 'green', label = 'Metrica Externa')
+    plt.legend(handles = [blue_patch,green_patch])
+    plt.show()
+
+    plt.plot(x, y_extern)
+    plt.xlabel('k')
+    plt.title('Metrica Externa - KMeans')
+    blue_patch = mpatches.Patch(color='blue', label='Metrica Externa')
+    plt.legend(handles=[blue_patch])
+    plt.show()
+
+    plt.plot(x, y_intern)
+    plt.xlabel('k')
+    plt.title('Metrica Interna - KMeans')
+    blue_patch = mpatches.Patch(color='blue', label='Metrica Interna')
+    plt.legend(handles=[blue_patch])
+    plt.show()
+if __name__ == '__main__':
+    main()

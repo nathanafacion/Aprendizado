@@ -1,0 +1,335 @@
+import numpy as np
+from sklearn import preprocessing
+from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import StratifiedKFold
+from sklearn.neural_network import MLPRegressor
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.decomposition import PCA
+from sklearn.svm import SVR
+from sklearn import neighbors
+from sklearn import linear_model
+from sklearn.linear_model import ARDRegression, LinearRegression,SGDRegressor
+from numpy import genfromtxt
+from sklearn.metrics import mean_absolute_error
+from sklearn.cluster import KMeans
+from sklearn import metrics
+import matplotlib.pyplot as plt
+import collections
+from sklearn.feature_extraction import DictVectorizer
+import pandas as pd
+from sklearn.preprocessing import OneHotEncoder
+
+### Nome: Nathana Facion
+### Exercicio 5 - Aprendizado de maquina
+# OBS: A forma de  realizar de realizar a normalizacao e  imputar os dados cientificamente esta errada
+# o correto eh pegar media e desvio de treino e aplicar no teste
+# o mesmo eh valido para a imputacao
+
+def readFile(fileName):
+    return genfromtxt(fileName, delimiter=',',dtype="string")
+
+def meanFinal(acfinal, n_folds):
+    return float(acfinal / n_folds)
+
+def accuracy(matrix):
+    return float(matrix[0][0] + matrix[1][1]) / float(matrix.sum())
+
+def  SVR_In (parameters):
+    return GridSearchCV(SVR(), parameters,cv=3,  scoring='neg_mean_absolute_error')
+
+def KNN (parameters):
+    return GridSearchCV(neighbors.KNeighborsRegressor(), parameters, cv=3, scoring='neg_mean_absolute_error')
+
+def RN (parameters):
+    return GridSearchCV(MLPRegressor(), parameters, cv=3, scoring='neg_mean_absolute_error')
+
+def RF (parameters):
+    return GridSearchCV(RandomForestRegressor(), parameters, cv=3, scoring='neg_mean_absolute_error')
+
+def GBM (parameters):
+    return GridSearchCV(GradientBoostingRegressor(), parameters, cv=3, scoring='neg_mean_absolute_error')
+
+def  LM(parameters):
+    return GridSearchCV(linear_model.LinearRegression(), parameters, cv=3, scoring='neg_mean_absolute_error')
+
+def  ARD(parameters):
+    return GridSearchCV(ARDRegression(), parameters, cv=3, scoring='neg_mean_absolute_error')
+
+def  LAR(parameters):
+    return GridSearchCV(linear_model.LassoLars(), parameters, cv=3, scoring='neg_mean_absolute_error')
+
+def LR(parameters):
+    return GridSearchCV(linear_model.LogisticRegression(), parameters, cv=3, scoring='neg_mean_absolute_error')
+
+def SGD(parameters):
+    return GridSearchCV(linear_model.SGDRegressor(), parameters, cv=3, scoring='neg_mean_absolute_error')
+
+def HG(parameters):
+    return GridSearchCV(linear_model.HuberRegressor(), parameters, cv=3, scoring='neg_mean_absolute_error')
+
+def RR(parameters):
+
+    return GridSearchCV(linear_model.Ridge(), parameters, cv=3, scoring='neg_mean_absolute_error')
+
+def kfoldExterno(parameters,X,Y,algorithm):
+    n_folds = 5
+    external_skf = StratifiedKFold(n_folds)
+    acxFinal = 0
+    for training_index, test_index in external_skf.split(X,Y):
+        X_train, X_test = X[training_index], X[test_index]
+        Y_train, Y_test = Y[training_index], Y[test_index]
+        if algorithm =='SVR':
+            model = SVR_In(parameters)
+        elif algorithm == 'KNN':
+            model = KNN(parameters)
+        elif algorithm == 'RN': # Redes Neurais
+            model = RN(parameters)
+        elif algorithm == 'RF':  # Random Forest
+            model = RF(parameters)
+        elif algorithm =='GBM': # Gradient Boosting Machine
+            model = GBM(parameters)
+        elif algorithm =='LM': # Linear Model
+            model = LM(parameters)
+        elif algorithm =='ARD': # Bayesian ARD regression.
+            model = ARD(parameters)
+        elif algorithm =='LAR': ### Least Angle Regression
+            model = LAR(parameters)
+        elif algorithm =='LR': ### Linear Regression
+            model = LR(parameters)
+        elif algorithm =='SGD': ### Stochastic Gradient Descent
+            model = SGD(parameters)
+        elif algorithm =='HG': ### Huber Regressor
+            model = HG(parameters)
+        elif algorithm =='RR': ### Ridge Regression
+            model = RR(parameters)
+
+        print('Algorithm:',algorithm)
+        print('best parameters:',model )
+        model.fit(X_train, Y_train)
+        predicted = model.predict(X_test)
+
+        ac = mean_absolute_error(Y_test, predicted)
+        #print('ac',ac)
+        acxFinal = ac + acxFinal
+
+    return meanFinal(acxFinal, n_folds)
+
+def metric_intern(estimator, data):
+    estimator.fit(data)
+    return metrics.silhouette_score(data, estimator.labels_,
+                             metric='euclidean')
+
+# Use alguma medida externa (Normalized/adjusted Rand, Mutual information, variation of information) para decidir no k.
+def metric_extern(estimator, data, class_origin):
+    estimator.fit(data)
+    return metrics.adjusted_mutual_info_score(class_origin,  estimator.labels_)
+
+
+def oneHot(X):
+    print X.shape
+    X_new = None
+    for i in range(X.shape[1]):
+
+        new_col = np.array(pd.get_dummies(X[:, i]))
+        if (not new_col[1].isdigit()):
+            if i == 0:
+                X_new = new_col
+        else:
+            X_new = np.append(X_new, new_col, axis=1)
+    #print sum_col
+    print X_new.shape
+
+
+# Realiza pre processamento
+def preProcessingData():
+    fileName = "//home//nathana//train.csv"
+    data = readFile(fileName)[1:]
+    dataClass = np.array([d[1] for d in data])
+    data =  np.array([d[2:len(d)] for d in data])
+
+    X = data
+    Y = dataClass
+
+    print('tamx:',X.shape[1])
+    deleteColumns = []
+    newColumns = []
+
+   # TAM =X.shape[1]
+   # for i in range(TAM):  # numero de colunas
+   #     col = X[:, i]
+   #     if (not col[1].isdigit()):
+   #         #col = pd.get_dummies(col)
+   #         count_elements = collections.Counter(col)
+   #         #print  i,')',count_elements, 'size:', len(count_elements)
+   #         teste =  pd.to_numeric(col, errors='ignore')
+   #         deleteColumns.append(i)
+
+
+
+    #X = np.delete(X, deleteColumns, axis=1)
+
+    #print 'col rem:',len(deleteColumns)
+    #print 'col add:',len(newColumns)
+    #print 'col tota:', X.shape[0]
+
+    X = X.astype(int)
+    ## Removendo colunas com NaN
+    for i in range(X.shape[1]):  # numero de colunas
+        col = X[:, i]
+        totalNaN = np.count_nonzero(np.isnan(col))
+        percNaN = (float(totalNaN) / float(col.size))
+        count_elements =collections.Counter(col)
+        #print  i,')',count_elements, 'size:', len(count_elements)
+        deleteColumns.append(i) if (percNaN > 0.0) else None
+
+    X = np.delete(X, deleteColumns, axis=1)
+    #X = pd.concat(X,newColumns)
+
+    # Removendo colunas com dados com pouca variancia
+    deleteColumns = []
+    #for i in range(X.shape[1]):  # numero de colunas
+    #    col = X[0:X.shape[0], i]
+    #    count_elements =collections.Counter(col)
+    #    #print  i,')',count_elements, 'size:', len(count_elements)
+    #    deleteColumns.append(i) if (len(count_elements) < 7 ) else None
+
+    #print('deleteColumns:', deleteColumns)
+    #print('numberColDelete:', len(deleteColumns))
+
+    #X = np.delete(X, deleteColumns, axis=1)
+
+
+    X = np.array(X)
+    Y = np.array(Y)
+
+    #  Finalmente padronize as colunas para media 0 e desvio padrao 1
+    #  preprocessing.scale  realiza essa acao
+
+    X = preprocessing.scale(X)
+
+    pca = PCA(n_components=0.8)
+    pca.fit(X)
+    X = pca.transform(X)
+    print(X.shape[1])
+    print(X.shape[0])
+    print('preprocessamento...')
+    return X, Y
+
+def cluster(fileData,fileClass):
+    k_init =  2
+    k_end = 17
+
+    # Rode o kmeans nos dados, com numero de restarts = 5
+    n_init = 5
+
+    x = []
+    y_intern = []
+    y_extern = []
+    best_extern = 0
+    for k in xrange(k_init, k_end + 1):
+        kmeans = KMeans(n_clusters = k, n_init = n_init)
+        extern = metric_extern(kmeans,data = fileData,  class_origin = fileClass)
+        intern = metric_intern(kmeans,data = fileData)
+        x.append(k)
+        if extern > best_extern:
+            best_extern = extern
+            best_k = k
+        y_intern.append(intern)
+        y_extern.append(extern)
+        print 'k: ', k, 'extern: ', extern,' intern: ',intern, 'best_extern:', best_extern
+
+    plt.plot(x, y_extern)
+    plt.plot(x, y_intern)
+    plt.xlabel('k')
+    plt.title('Metrica Interna e Externa - KMeans')
+    #plt.show()
+    print('melhor k',best_k)
+    return KMeans(n_clusters=6, n_init=n_init).fit(fileData)
+
+
+def main():
+    X, Y = preProcessingData()
+
+    #number = cluster(X, Y)
+    #Y = np.array(number.labels_)
+
+    ### KNN
+    parameters = {'n_neighbors': [ 1, 5, 11, 15, 21, 25],
+                  'metric': ['manhattan', 'chebyshev']}
+    #mean_knn = kfoldExterno(parameters,X,Y,'KNN')
+    #print('KNN:',mean_knn)
+
+    #### SVR
+    parameters ={'C': [2**(-5), 2**(0), 2**(5)],
+                 'gamma': [ 2**(-5), 2**(0), 2**(5)],
+                 'kernel': ['rbf', 'linear']}
+    #mean_svr = kfoldExterno(parameters, X, Y, 'SVR')
+    #print('SVR:',mean_svr)
+
+    #### Rede neural
+    parameters ={ 'hidden_layer_sizes' :[10, 20, 40, 80 ],
+                  'solver': ['lbfgs', 'sgd'],
+                  'max_iter' : [900],
+                  'epsilon':[2**(-5), 2**(0), 2**(5)]}
+    #mean_rn = kfoldExterno(parameters, X, Y, 'RN')
+    #print('RN:',mean_rn)
+
+    #### Random Forest
+    parameters ={ 'max_features' : [10, 15, 20, 25],
+                  'n_estimators': [100, 200, 300 ,400],
+                  'max_features':['sqrt','auto','log2']}
+    #mean_rf = kfoldExterno(parameters, X, Y, 'RF')
+    #print('RF:',mean_rf)
+
+    ### Gradient Boosting Machine
+    parameters = {'learning_rate': [0.1,0.05],
+                  'loss' : ['ls', 'lad', 'huber', 'quantile'],
+                  'max_depth': [5],
+                  'n_estimators':[30, 70,100],
+                  'max_features':['sqrt','auto','log2']
+                  }
+    #mean_gbm = kfoldExterno(parameters, X, Y, 'GBM')
+    #print('GBM:', mean_gbm)
+
+    ### Linear Model
+    parameters = { }
+    #mean_lm = kfoldExterno(parameters, X, Y, 'LM')
+    #print('LM:', mean_lm)
+
+    ### Bayesian ARD regression
+    parameters = { 'alpha_1':[2**(-5)],
+                   'lambda_1': [ 2 ** (-5), 2 ** (-3)],
+                   }
+    #mean_ard = kfoldExterno(parameters, X, Y, 'ARD')
+    #print('ARD:', mean_ard)
+
+    ### Least Angle Regression
+    parameters = { 'eps':[0.1,0.2,0.3,0.4,0.5]}
+    #mean_lar = kfoldExterno(parameters, X, Y, 'LAR')
+    #print('LAR:', mean_lar)
+
+    ### Logistic Regression
+    parameters = {'C': [2**(-5), 2**(0), 2**(5), 2**(10)]}
+    #mean_lr = kfoldExterno(parameters, X, Y, 'LR')
+    #print('LR:', mean_lr)
+
+    ### Stochastic Gradient Descent
+    parameters = {	'loss' : ['squared_loss', 'huber', 'epsilon_insensitive', 'squared_epsilon_insensitive'],
+                    'penalty':['l2', 'l1','elasticnet']
+    }
+    #mean_sgd = kfoldExterno(parameters, X, Y, 'SGD')
+    #print('SGD:', mean_sgd)
+
+    ### Huber Regressor
+    parameters = {}
+    #mean_hg = kfoldExterno(parameters, X, Y, 'HG')
+    #print('HG:', mean_hg)
+
+    ###  Ridge Regression
+    parameters = {'solver' : ['auto', 'svd', 'cholesky', 'lsqr', 'sparse_cg', 'sag']}
+    #mean_rr = kfoldExterno(parameters, X, Y, 'RR')
+    #print('RR:', mean_rr)
+
+if __name__ == '__main__':
+    main()
