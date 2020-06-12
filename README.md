@@ -1,1 +1,7 @@
-Exerc�cios de Aprendizado de m�quina  realizado na Unicamp em 2016
+## Descrição:
+Exercícios de Aprendizado de máquina  realizado na Unicamp em 2016
+
+## Tecnologias usada:
+- Numpy
+- Sklearn
+- Pandas
